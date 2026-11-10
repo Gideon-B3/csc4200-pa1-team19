@@ -14,38 +14,90 @@
 #include "etp.h"
 
 #include <openssl/evp.h>
+#include <arpa/inet.h>
+#include <string.h>
 
-int etp_send(tp_conn *c, uint8_t type, uint8_t status, const void *payload, uint32_t len)
+int etp_send(tp_conn *c, uint8_t type, uint8_t status,
+             const void *payload, uint32_t len)
 {
-    (void)c; (void)type; (void)status; (void)payload; (void)len;
-    /* TODO: build the 8-byte header (LENGTH in network byte order) and send
-     * header and payload with tp_send_all. */
-    return -1;
+    if (c == NULL || len > ETP_MAX_LEN)
+        return -1;
+
+    if (len > 0 && payload == NULL)
+        return -1;
+
+    uint8_t header[ETP_HEADER_SIZE];
+
+    header[0] = ETP_VERSION;
+    header[1] = type;
+    header[2] = status;
+    header[3] = 0;
+
+    uint32_t network_len = htonl(len);
+    memcpy(header + 4, &network_len, sizeof(network_len));
+
+    if (tp_send_all(c, header, sizeof(header)) != 0)
+        return -1;
+
+    if (len > 0) {
+        if (tp_send_all(c, payload, len) != 0)
+            return -1;
+    }
+
+    return 0;
 }
 
 int etp_read_header(tp_conn *c, etp_header *h)
 {
-    (void)c; (void)h;
-    /* TODO: tp_recv_exact 8 bytes, then decode each field. */
-    return -1;
+    if (c == NULL || h == NULL)
+        return -1;
+
+    uint8_t header[ETP_HEADER_SIZE];
+
+    int result = tp_recv_exact(c, header, sizeof(header));
+
+    if (result != 1)
+        return result;
+
+    h->version  = header[0];
+    h->type     = header[1];
+    h->status   = header[2];
+    h->reserved = header[3];
+
+    uint32_t network_len;
+    memcpy(&network_len, header + 4, sizeof(network_len));
+
+    h->length = ntohl(network_len);
+
+    return 1;
 }
 
 int etp_valid_name(const uint8_t *name, size_t len)
 {
-    if (len < 1 || len > 64 || name[0] == '.')
+    if (len < 1 || len > 64 || name == NULL || name[0] == '.')
         return 0;
+
     for (size_t i = 0; i < len; i++) {
         uint8_t b = name[i];
-        int ok = (b >= 'A' && b <= 'Z') || (b >= 'a' && b <= 'z') ||
-                 (b >= '0' && b <= '9') || b == '.' || b == '_' || b == '-';
+
+        int ok = (b >= 'A' && b <= 'Z') ||
+                 (b >= 'a' && b <= 'z') ||
+                 (b >= '0' && b <= '9') ||
+                 b == '.' || b == '_' || b == '-';
+
         if (!ok)
             return 0;
     }
+
     return 1;
 }
 
 int etp_sha256(const void *data, size_t len, uint8_t out[32])
 {
     unsigned int outlen = 0;
-    return EVP_Digest(data, len, out, &outlen, EVP_sha256(), NULL) == 1 && outlen == 32 ? 0 : -1;
+
+    return EVP_Digest(data, len, out, &outlen,
+                      EVP_sha256(), NULL) == 1 &&
+           outlen == 32 ? 0 : -1;
 }
+
