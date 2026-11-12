@@ -8,15 +8,13 @@ answer only if it is true._
 ## 1. Did you use generative AI on this assignment?
 
 - [ ] No. I did not use any generative AI tool for any part of PA1.
-- [ ] Yes, as described below.
+- [X] Yes, as described below.
 
 ## 2. Statement (the syllabus form)
 
-> The author acknowledges the utilization of _[tool name]_, a language model
-> developed by _[provider]_, in the preparation of this assignment. _[Tool name]_
-> was employed in the following manner(s) within this assignment: _[for example:
-> explaining socket errors; reviewing my framing code; drafting the Makefile;
-> suggesting test cases; editing DESIGN.md for clarity]_.
+> The author acknowledges the utilization of Claude, a language model
+> developed by Anthropic, in the preparation of this assignment.
+> Claude was used for assistance with understanding networking concepts, troubleshooting errors, reviewing code, and improving documentation.
 
 ## 3. Log
 
@@ -25,18 +23,18 @@ whole conversations, but keep them in case you are asked._
 
 | # | What I asked (summary) | What I used from the answer | What I changed or rejected | How I checked it was right |
 |---|---|---|---|---|
-| 1 | | | | |
-| 2 | | | | |
+| 1 |Questions about TCP sockets and message framing|Explanations of networking concepts|Applied the concepts to my implementation|Reviewed the protocol specifications|
+| 2 |Help understanding errors during testing|Debugging suggestions|Evaluated and applied relevant fixes|Ran the self check|
+| 3 |Suggestions for testing file transfers|Test Ideas|Adapted the tests to the project|Verified LIST, GET, and PUT|
+| 4 |Help reviewing documentation|Suggestions for clarity and organization|Revised the wording|Compared it with the source code|
+| 5 |Help developing an integration test|AI assisted Bash test script|Added it to the project|Ran the script and confirmed all tests passed|
 
 ## 4. Where AI-produced material remains
 
-_List each file and function (or document section) that still contains code or
-text an AI tool generated, even after you edited it. If none, say none._
+Claude assisted with developing tests/test_integration.sh, which tests the client and server using LIST, GET, PUT, and SHA 256 verification. 
+AI assistance was also used to review and improve portions of README.md and DESIGN.md.
 
 ## 5. One thing the AI got wrong — or how you checked it
 
-_Describe one answer, suggestion or piece of code that was wrong, misleading or
-did not fit the specification, and how you caught it. If you found nothing wrong,
-say so and describe how you checked (a test you ran, the part of the
-specification you compared it with). If you did not use AI, describe one thing
-you got wrong yourself and how you caught it._
+I did not rely on AI suggestions without verifying them. I compared the recommendations against the ETP/1 specification and tested the implementation using the course provided self-check. I also ran the AI-assisted integration test to verify communication between the client and server, including LIST, GET, PUT, and SHA 256 verification.
+All 24 self-check tests passed, resulting in a score of 30/30 execution points
