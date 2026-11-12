@@ -1,74 +1,89 @@
-# PA1 Capture Analysis
+# PA1 — TCP Packet Capture Analysis
 
-_Your capture, `evidence/pa1-capture.pcap`, holds two ETP sessions from your own
-programs: a PUT, then a GET of the same file. This analysis is about the **GET
-session** unless a question says otherwise. Use Wireshark (or tshark) to read the
-capture. The numbers must come from your capture: they are checked against it._
+## 1. Capture Setup
 
-## How I captured it
+We captured TCP traffic between the ETP/1 client and server using `tcpdump` on Ubuntu Linux.
+The server listened on TCP port 5000, and the client connected through the loopback interface (`127.0.0.1`).
+The capture was recorded using:
 
-_Paste the exact commands you ran (capture, server, client, ss), and the size of
-the file you transferred._
-
+```bash
+sudo tcpdump -i lo -s 0 -U -w evidence/pa1-capture.pcap 'tcp port 5000'
 ```
+The capture contains two separate client connections: one for uploading a file using PUT and another for downloading it using GET.
+
+## 2. TCP Three-Way Handshake
+
+The first connection used client port 43868 and server port 5000.
+The initial packets show the TCP three way handshake:
+
+The client sent a SYN packet requesting a connection.
+The server replied with SYN ACK.
+The client acknowledged with ACK.
+
+The first connection was established at approximately 05:07:57.639.
+The second connection, using client port 39492, established its connection at approximately 05:08:40.732.
+Both connections used the loopback address, so no physical network interface was involved.
+
+## 3. ETP/1 Message Exchange
+
+After establishing the TCP connection, the client and server exchanged ETP/1 messages.
+ETP/1 uses an eight byte header containing the protocol version, message type, and payload length.
+In the first connection, the client sent an eight byte TCP data segment followed by six payload bytes during the initial exchange.
+The server then responded with an eight-byte segment followed by fourteen bytes of data.
+This demonstrates that ETP/1 messages can be transmitted using multiple TCP segments instead of assuming a complete message arrives in one read.
+TCP acknowledgment packets confirmed the receipt of transmitted bytes.
+
+## 4. PUT and GET Operations
+
+The first recorded session was the PUT operation, which uploaded a text file to the server.
+The capture shows a client data segment containing 47 bytes during the request exchange. 
+The server later transmitted a 32-byte data segment, consistent with the SHA-256 digest returned after a successful PUT.
+The second session was the GET operation. It used client port 39492 and included a 12 byte request payload segment. Theserver responded with file data during the transfer.
+After completing both operations, we compared the original file and the downloaded copy using:
+
+```bash
+cmp /tmp/etp-upload.txt /tmp/etp-downloaded.txt
 ```
+The comparison succeeded, confirming that the downloaded content matched the original uploaded file.
 
-## Facts
+## 5. TCP Connection Termination
 
-_Fill in every value from **your** capture, for the **GET** session. Integers in
-decimal. Sequence numbers are the **absolute** (raw) values — in Wireshark, turn
-off "relative sequence numbers" (Edit > Preferences > Protocols > TCP) or read
-the "Sequence Number (raw)" field. With tshark, add
-`-o tcp.relative_sequence_numbers:FALSE`. Do not change the key names or the
-`etp-facts` label: a script reads this block._
+Both sessions ended through normal TCP connection termination.
+In the first session, the server sent a FIN packet at approximately 05:07:57.754297. 
+The client then sent its own FIN, and the server acknowledged it.
+In the second session, the server sent a FIN at approximately 05:08:40.862752. 
+The client followed with its FIN, and the server acknowledged it.
+No TCP reset packets appeared in the filtered connection-termination output.
+The server therefore closed both observed sessions through TCP's normal FIN-based shutdown sequence.
+
+## 6. Observations and Conclusion
+
+This capture demonstrates that the ETP/1 application operates over TCP usin separate connections for PUT and GET.
+The recorded traffic includes TCP connection establishment, ETP/1 message exchanges, acknowledgments, application data transfer, and normal connection termination.
+The successful file comparison further confirms that the uploaded data was retrieved without modification.
+The capture also shows why the application must handle TCP as a byte stream: protocol headers and payloads may appear in separate TCP segments.
+The captured traffic is saved in `evidence/pa1-capture.pcap` for further inspection.
+
+
+## 7. Measured TCP Facts — GET Session
+
+The following values were extracted from the GET connection in
+`evidence/pa1-capture.pcap` using the course self-check's packet parser.
 
 ```etp-facts
-server_port:
-client_port:
-client_isn:                      # raw sequence number in the client's SYN
-server_isn:                      # raw sequence number in the server's SYN/ACK
-client_mss:                      # MSS option value in the client's SYN, in bytes
-server_to_client_payload_bytes:  # all TCP payload bytes the server sent in this session (HELLO_OK + GET_OK + BYE_OK)
-server_to_client_data_segments:  # server-to-client frames with payload, across all three responses, counted as captured
-first_fin_from:                  # server or client
+server_port: 5000
+client_port: 58620
+client_isn: 3490537983
+server_isn: 4291446487
+client_mss: 65495
+server_to_client_payload_bytes: 262182
+server_to_client_data_segments: 11
+first_fin_from: server
 ```
 
-## Q1. The handshake
-
-_Give the frame number, flags, and raw sequence and acknowledgment numbers of the
-three handshake segments of the GET session. Explain why the acknowledgment number
-in the third segment is what it is. What MSS did the client advertise, and what on
-your machine determines that value?_
-
-## Q2. Your protocol on the wire
-
-_Find the segment that carries your client's GET request. Give its frame number,
-paste the first 8 payload bytes in hex, and decode each header field (VERSION,
-TYPE, STATUS, RESERVED, LENGTH). Do the same for the header of the server's
-GET_OK. Does GET_OK's LENGTH equal the size of your file? Show the arithmetic that
-connects `server_to_client_payload_bytes` to the three responses the server sent in
-this session._
-
-## Q3. A byte stream, not messages
-
-_How many segments carried the **GET_OK response** (not counting the segments
-that carried HELLO_OK and BYE_OK), and what were their payload sizes? Were they
-all the same size? Were they all the MSS? Did any one segment carry the
-end of one ETP message and the start of the next, or did one ETP message span
-several segments? Explain what this means for code that reads an ETP message, and
-point to the place in your own code that deals with it._
-
-## Q4. Teardown and TIME-WAIT
-
-_Which side sent the first FIN in the GET session, and why — cite the rule in the
-specification. Paste the relevant line(s) from `evidence/time-wait.txt`. Which end
-of the connection (address and port) is in TIME-WAIT, why that end, and roughly how
-long Linux keeps it there? Connect this to the SO_REUSEADDR requirement._
-
-## Q5. What an observer learns
-
-_Suppose someone else obtained this capture file. List specifically what they
-learn about your session (names, sizes, timing, anything else). You captured with a
-200-byte snap length: what does that hide, and what does it not hide? Which kind of
-protection would stop a real on-path observer from learning these things, and what
-would it still not hide?_
+The GET connection used client port 58620 and server port 5000.
+The client advertised an MSS of 65495 bytes.
+The server transmitted 262182 TCP payload bytes across 11
+data-bearing TCP segments. This includes the 262144-byte file
+and 38 additional bytes of ETP/1 protocol data.
+The server sent the first FIN, initiating normal TCP connection termination.

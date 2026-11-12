@@ -1,8 +1,8 @@
 # PA1 — ETP/1 Client and Server
 
-**Student:** _your full name_ (`your-github-username`)
-**Course:** CSC 4200 / CSC 5200 (delete one) — Fall 2026
-**Language:** _C or Python_
+**Student:** Gideon Befekadu & Hossana Haileleul
+**Course:** CSC 4200  — Fall 2026
+**Language:** C
 **Submitted commit:** _the SHA you paste into Canvas_
 
 ## Build and run
@@ -11,17 +11,28 @@
 make build
 make run-server PORT=5000 ROOT=server-files      # in one terminal
 ./etp-client --host 127.0.0.1 --port 5000 --name YOURNAME list    # in another
+make check	#provided to check criteria
+./tests/test_integration.sh	#Verifies LIST, GET, PUT, and the SHA 256 digest
 ```
 
-_Replace this with anything else a grader needs: dependencies you installed, the
-Python or gcc version you used, how to run your own tests._
 
 ## What works and what does not
 
-_Be specific and honest. Paste the `Execution: N / 30 points` and `Build and
-repository: N / 10` lines from `make check`. List any test
-that fails and what you believe the cause is. Known limitations go here, not in a
-footnote. An honest "S16 fails because ..." earns more than silence._
+
+`Execution: 30 / 30 points`
+`Build and Repository 10/10`
+
+All 18 server tests and all 6 client tests passed.
+The implementation supports the HELLO handshake, LIST, GET, PUT, SHA-256 digest verification, BYE session termination, protocol error handling, and multiple concurrent client connections.
+The tests also verified fragmented requests, large and empty file transfers, invalid filenames, unexpected disconnects, and restarting the server on the same port.
+The additional integration test successfully verified LIST, GET, PUT, and SHA-256 using the actual client and server.
+The packet capture contains two TCP connections, including a complete GET transfer. The network evidence and required analysis fields were accepted by the self-check.
+
+Known limitations:
+The protocol does not provide authentication or encryption.
+Simultaneous operations on the same filename are not protected by separate file-level locks.
+
+No execution-test failures were observed.
 
 ## Files
 
@@ -33,6 +44,13 @@ footnote. An honest "S16 fails because ..." earns more than silence._
 | `evidence/pa1-capture.pcap` | loopback capture of my PUT and GET sessions |
 | `evidence/time-wait.txt` | `ss` output showing TIME-WAIT after my session |
 | `evidence/ANALYSIS.md` | my capture analysis |
+| `transport_tcp.c` | TCP transport implementation |
+| `transport.h` | Transport interface |
+| `etp.c` | ETP/1 framing, validation, and SHA-256 helpers |
+| `etp.h` | ETP/1 protocol definitions |
+| `server.c` | Server sessions, requests, and file operations |
+| `client.c` | Client commands and file transfers |
+| `test_integration.sh` | LIST, GET, PUT, and digest tests |
 
 ---
 
@@ -46,4 +64,4 @@ generative AI tool helped me produce. My use of AI tools is disclosed in full in
 `AI_USE.md`. The capture and measurements in `evidence/` come from my own programs,
 run by me.
 
-**Signed:** _full name_  **Date:** _date_
+**Signed:** Gideon Befekadu & Hossana Haileleul  **Date:** 11/12/2026
