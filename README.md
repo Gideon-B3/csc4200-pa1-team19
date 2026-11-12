@@ -3,7 +3,7 @@
 **Student:** Gideon Befekadu & Hossana Haileleul
 **Course:** CSC 4200  — Fall 2026
 **Language:** C
-**Submitted commit:** _the SHA you paste into Canvas_
+**Submitted commit:** See final sha through caanvas
 
 ## Build and run
 
